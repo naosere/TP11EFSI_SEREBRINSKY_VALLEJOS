@@ -30,6 +30,7 @@ function LeaderboardPage() {
         startGame,
         playerName,
         score,
+        correctCount,
         elapsedTime,
     } = useGame();
 
@@ -114,7 +115,7 @@ function LeaderboardPage() {
                             </span>
 
                             <strong>
-                                15
+                                {correctCount}
                             </strong>
 
                             <small>

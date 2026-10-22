@@ -2,6 +2,7 @@ import {
     createContext,
     useContext,
     useEffect,
+    useRef,
     useState,
     type ReactNode,
 } from "react";
@@ -18,6 +19,7 @@ export interface GameResult {
     score: number;
     time: number;
     date: string;
+    notifications: Notification[];
 }
 
 export interface PlayerData {
@@ -40,6 +42,7 @@ interface GameContextType {
     playerName: string;
 
     score: number;
+    correctCount: number;
     currentRound: number;
 
     // Tiempo total de la partida
@@ -101,6 +104,9 @@ export function GameProvider({
     const [countries, setCountries] =
         useState<Country[]>([]);
 
+    // Países ya mostrados en la partida actual: evita repetir banderas.
+    const usedCountryNames = useRef<Set<string>>(new Set());
+
     const [currentCountry, setCurrentCountry] =
         useState<Country | null>(null);
 
@@ -115,6 +121,9 @@ export function GameProvider({
         useState<number>(0);
 
     const [currentRound, setCurrentRound] =
+        useState<number>(0);
+
+    const [correctCount, setCorrectCount] =
         useState<number>(0);
 
     // Tiempo total de toda la partida
@@ -139,6 +148,7 @@ export function GameProvider({
 
     const [notifications, setNotifications] =
         useState<Notification[]>([]);
+    const notificationsRef = useRef<Notification[]>([]);
 
     const [leaderboard, setLeaderboard] =
         useState<PlayerData[]>([]);
@@ -216,6 +226,8 @@ export function GameProvider({
             countries.length > 0
         ) {
             setPendingStart(false);
+
+            usedCountryNames.current.clear();
 
             setScore(0);
             setCurrentRound(1);
@@ -373,18 +385,18 @@ export function GameProvider({
             reason,
         };
 
-        setNotifications(
-            (previous) => [
-                ...previous,
-                notification,
-            ]
-        );
+        notificationsRef.current = [
+            ...notificationsRef.current,
+            notification,
+        ];
+        setNotifications(notificationsRef.current);
 
         // IMPORTANTE:
         // Ya NO se eliminan automáticamente.
     }
 
     function resetNotifications(): void {
+        notificationsRef.current = [];
         setNotifications([]);
     }
 
@@ -392,32 +404,27 @@ export function GameProvider({
     // ELEGIR PAÍS
     // ----------------------------------------
 
-    function chooseRandomCountry(
-        previousCountry?: Country | null
-    ): void {
-        if (countries.length === 0) {
-            return;
+    function chooseRandomCountry(): void {
+        if (countries.length === 0) return;
+
+        // Elegimos únicamente entre países que todavía no aparecieron.
+        const availableCountries = countries.filter(
+            (country) => !usedCountryNames.current.has(country.name)
+        );
+
+        if (availableCountries.length === 0) {
+            // Si la API devuelve menos países que rondas, reiniciamos el pool
+            // para evitar que el juego quede sin bandera.
+            usedCountryNames.current.clear();
+            availableCountries.push(...countries);
         }
 
-        let randomCountry: Country;
+        const randomCountry = availableCountries[
+            Math.floor(Math.random() * availableCountries.length)
+        ];
 
-        do {
-            randomCountry =
-                countries[
-                    Math.floor(
-                        Math.random() *
-                            countries.length
-                    )
-                ];
-        } while (
-            countries.length > 1 &&
-            randomCountry.name ===
-                previousCountry?.name
-        );
-
-        setCurrentCountry(
-            randomCountry
-        );
+        usedCountryNames.current.add(randomCountry.name);
+        setCurrentCountry(randomCountry);
     }
 
     // ----------------------------------------
@@ -432,7 +439,11 @@ export function GameProvider({
 
         setPendingStart(false);
 
+        usedCountryNames.current.clear();
+
         setScore(0);
+
+        setCorrectCount(0);
 
         setCurrentRound(1);
 
@@ -468,9 +479,7 @@ export function GameProvider({
     // ----------------------------------------
 
     function nextCountry(): void {
-        chooseRandomCountry(
-            currentCountry
-        );
+        chooseRandomCountry();
 
         // Reiniciamos el tiempo
         // de la bandera.
@@ -513,6 +522,7 @@ export function GameProvider({
             time: elapsedTime,
 
             date: new Date().toISOString(),
+            notifications: [...notificationsRef.current],
         };
 
         // ------------------------------------
@@ -698,6 +708,7 @@ export function GameProvider({
                 score + 10;
 
             setScore(newScore);
+            setCorrectCount((previousCount) => previousCount + 1);
 
             addNotification(
                 10,
@@ -876,6 +887,8 @@ function skipCountry(): void {
         playerName,
 
         score,
+
+        correctCount,
 
         currentRound,
 

@@ -22,7 +22,7 @@ function Notifications() {
                         Todavía no hay actividad.
                     </p>
                 ) : (
-                    notifications.map(
+                    [...notifications].reverse().map(
                         (notification) => (
                             <div
                                 key={

@@ -1,6 +1,7 @@
 import {
     useNavigate,
 } from "react-router-dom";
+import { useState } from "react";
 
 import {
     useGame,
@@ -31,6 +32,7 @@ function HistoryPage() {
 
     const navigate =
         useNavigate();
+    const [selectedGame, setSelectedGame] = useState<(typeof history)[number] | null>(null);
 
     if (!playerName) {
         return (
@@ -246,9 +248,12 @@ function HistoryPage() {
                                     game,
                                     index
                                 ) => (
-                                    <div
+                                    <button
+                                        type="button"
                                         className="history-row"
                                         key={`${game.date}-${index}`}
+                                        onClick={() => setSelectedGame(game)}
+                                        aria-label={`Ver notificaciones de la partida ${orderedHistory.length - index}`}
                                     >
                                         <div className="history-game-number">
                                             <span>
@@ -294,7 +299,7 @@ function HistoryPage() {
                                                 )}
                                             </strong>
                                         </div>
-                                    </div>
+                                    </button>
                                 )
                             )}
 
@@ -302,6 +307,30 @@ function HistoryPage() {
                     )}
 
                 </section>
+
+                {selectedGame && (
+                    <div className="game-history-modal-backdrop" onClick={() => setSelectedGame(null)}>
+                        <section className="game-history-modal" role="dialog" aria-modal="true" aria-labelledby="game-history-modal-title" onClick={(event) => event.stopPropagation()}>
+                            <button type="button" className="game-history-modal-close" onClick={() => setSelectedGame(null)} aria-label="Cerrar">×</button>
+                            <span className="history-eyebrow">DETALLE DE PARTIDA</span>
+                            <h2 id="game-history-modal-title">Historial de notificaciones</h2>
+                            <p className="game-history-modal-summary">{new Date(selectedGame.date).toLocaleString("es-AR")} · {selectedGame.score} puntos · {formatTime(selectedGame.time)}</p>
+                            {selectedGame.notifications?.length ? (
+                                <ol className="game-notification-list">
+                                    {[...selectedGame.notifications].reverse().map((notification) => (
+                                        <li key={notification.id}>
+                                            <span className={notification.points >= 0 ? "game-notification-points positive" : "game-notification-points negative"}>{notification.points > 0 ? "+" : ""}{notification.points}</span>
+                                            <span>{notification.reason}</span>
+                                        </li>
+                                    ))}
+                                </ol>
+                            ) : (
+                                <p className="game-notification-empty">Esta partida no tiene notificaciones guardadas. Las partidas anteriores a esta actualización no incluyen ese historial.</p>
+                            )}
+                            <button type="button" className="history-primary-button" onClick={() => setSelectedGame(null)}>Cerrar</button>
+                        </section>
+                    </div>
+                )}
 
                 <button
                     className="history-back-button"

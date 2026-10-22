@@ -40,21 +40,10 @@ const {
 
     const cleanName = name.trim();
 
-    const rulesAlreadyShown =
-        localStorage.getItem("rulesShown");
-
-    if (!rulesAlreadyShown) {
-        setPendingName(cleanName);
-        setShowRules(true);
-        return;
-    }
-
-    setPlayerName(cleanName);
-
-    if (!loading && countries.length > 0) {
-        startGame();
-        navigate("/game");
-    }
+    // Mostramos las reglas cada vez que se inicia una partida,
+    // incluso si el jugador cambia su nombre o vuelve a jugar.
+    setPendingName(cleanName);
+    setShowRules(true);
 }
     function handleStartAfterRules(): void {
     setPlayerName(pendingName);
